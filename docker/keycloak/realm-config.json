@@ -1,0 +1,79 @@
+{
+  "realm": "bornes-recharge",
+  "enabled": true,
+  "displayName": "Bornes de Recharge",
+  "displayNameHtml": "<h1>Plateforme de Réservation de Bornes de Recharge</h1>",
+  "accessCodeLifespan": 60,
+  "accessCodeLifespanUserAction": 300,
+  "accessTokenLifespan": 300,
+  "actionTokenGeneratedByAdminLifespan": 12,
+  "actionTokenGeneratedByUserLifespan": 300,
+  "clients": [
+    {
+      "clientId": "bornes-app",
+      "name": "Bornes Recharge App",
+      "enabled": true,
+      "clientAuthenticationType": "client-secret",
+      "secret": "your_secret_key",
+      "publicClient": false,
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:3000/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:3000"
+      ],
+      "protocol": "openid-connect",
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "fullScopeAllowed": true,
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "User",
+      "email": "admin@bornes.local",
+      "enabled": true,
+      "credentials": [
+        {
+          "temporary": false,
+          "type": "password",
+          "value": "admin_password"
+        }
+      ],
+      "realmRoles": [
+        "default-roles-bornes-recharge",
+        "offline_access",
+        "uma_authorization"
+      ]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "User role"
+      },
+      {
+        "name": "admin",
+        "description": "Administrator role"
+      }
+    ]
+  }
+}

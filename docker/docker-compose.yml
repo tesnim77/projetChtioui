@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: bornes_postgres
+    environment:
+      POSTGRES_USER: bornes_user
+      POSTGRES_PASSWORD: bornes_secure_pass
+      POSTGRES_DB: bornes_recharge_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bornes_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bornes_network
+
+  # Keycloak (Auth Server)
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0.0
+    container_name: bornes_keycloak
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
+      KC_DB_USERNAME: bornes_user
+      KC_DB_PASSWORD: bornes_secure_pass
+      KC_ADMIN: admin
+      KC_ADMIN_PASSWORD: admin_password
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: 8080
+      KC_HTTP_ENABLED: "true"
+    command: start-dev
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./keycloak/realm-config.json:/opt/keycloak/realm-config.json
+    networks:
+      - bornes_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # Backend API (Node.js)
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: bornes_backend
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      DATABASE_URL: postgresql://bornes_user:bornes_secure_pass@postgres:5432/bornes_recharge_db
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: bornes-recharge
+      KEYCLOAK_CLIENT_ID: bornes-app
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-your_secret_key}
+      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret}
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    volumes:
+      - ../backend:/app
+      - /app/node_modules
+    networks:
+      - bornes_network
+    command: npm run dev
+
+  # Frontend (React - optional for Docker, usually run locally)
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: bornes_frontend
+    environment:
+      REACT_APP_API_URL: http://backend:5000
+      REACT_APP_KEYCLOAK_URL: http://localhost:8080
+      REACT_APP_KEYCLOAK_REALM: bornes-recharge
+      REACT_APP_KEYCLOAK_CLIENT_ID: bornes-app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+    networks:
+      - bornes_network
+    command: npm run dev
+
+volumes:
+  postgres_data:
+
+networks:
+  bornes_network:
+    driver: bridge
